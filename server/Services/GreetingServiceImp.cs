@@ -1,13 +1,9 @@
 ﻿using Greeting;
 using Grpc.Core;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using static Greeting.GreetingService;
 
-namespace server
+namespace server.Services
 {
     public class GreetingServiceImp : GreetingServiceBase
     {

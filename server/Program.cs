@@ -1,12 +1,8 @@
 ﻿using Greeting;
 using Grpc.Core;
-using Sum;
+using server.Services;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace server
 {
@@ -23,7 +19,6 @@ namespace server
                 {
                     Services = { 
                         GreetingService.BindService(new GreetingServiceImp()),
-                        SumService.BindService(new SumServiceImp()),
                     },
                     Ports = { new ServerPort("localhost", Port, ServerCredentials.Insecure) }
                 };
