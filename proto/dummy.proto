@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+package Dummy;
+
+message DummyMessage {}
+
+service DummyService {}
