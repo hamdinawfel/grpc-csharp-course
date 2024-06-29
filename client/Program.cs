@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using static Calculator.CalculatorService;
+using static Greeting.GreetingService;
 
 namespace client
 {
@@ -24,14 +26,33 @@ namespace client
             });
 
             
-            var client = new GreetingService.GreetingServiceClient(channel);
+            var client = new GreetingServiceClient(channel);
+            var calculatorClient = new CalculatorServiceClient(channel);
 
-            //UNARY
             var greeting = new Greeting.Greeting()
             {
                 FirstName = "Nawfel",
                 LastName = "Hamdi"
             };
+
+            //UNARY
+            //Greet(client, greeting);
+            //SERVER STREAM
+            //await GreetingManyTimes(client, greeting);
+            //CLIENT STREAM
+            //await LongGreet(client, greeting);
+            //BIDI STREAMING EXERCICE
+            await GreetEveryone(client);
+
+            //CLIENT STREAMING EXERCICE
+            //await CalculateAvg(calculatorClient);
+
+            channel.ShutdownAsync().Wait();
+            Console.ReadKey();
+        }
+
+        private static void Greet(GreetingServiceClient client, Greeting.Greeting greeting)
+        {
 
             var request = new GreetingRequest() { Greeting = greeting };
             var response = client.Greet(request);
@@ -39,48 +60,87 @@ namespace client
             Console.WriteLine("Start UNARY GRPC test result");
             Console.WriteLine(response.Result);
             Console.WriteLine("End UNARY GRPC test result");
-
-            //SERVER STREAM
-            var requestToServerStream = new GreetingManyTimesRequest() { Greeting = greeting };
-            var responseFromServerStream = client.GreetManyTimes(requestToServerStream);
+        }
+        private static async Task GreetingManyTimes(GreetingServiceClient client, Greeting.Greeting greeting)
+        {
+            var request = new GreetingManyTimesRequest() { Greeting = greeting };
+            var responseStream = client.GreetManyTimes(request);
 
             Console.WriteLine("Start SERVER STREAMING GRPC test result");
 
-            while (await responseFromServerStream.ResponseStream.MoveNext())
+            while (await responseStream.ResponseStream.MoveNext())
             {
-                await Console.Out.WriteLineAsync(responseFromServerStream.ResponseStream.Current.Result);
+                await Console.Out.WriteLineAsync(responseStream.ResponseStream.Current.Result);
                 await Task.Delay(100);
             }
             Console.WriteLine("End SERVER STREAMING GRPC test result");
+        }
 
-            //CLIENT STREAM
+        private static async Task LongGreet(GreetingServiceClient client, Greeting.Greeting greeting)
+        {
             Console.WriteLine("Start CLIENT STREAMING GRPC test result");
 
-            var clientStremRequest = new LongGreetingRequest { Greeting = greeting };
-            var clientStreamReq = client.LongGreet();
+            var request = new LongGreetingRequest { Greeting = greeting };
+            var clientStreamCall = client.LongGreet();
             foreach (var i in Enumerable.Range(0, 10))
             {
-                await clientStreamReq.RequestStream.WriteAsync(clientStremRequest);
+                await clientStreamCall.RequestStream.WriteAsync(request);
                 Console.WriteLine($"Sending req : {i} ...");
                 await Task.Delay(100);
             }
 
-            await clientStreamReq.RequestStream.CompleteAsync();
-            var responseFormServerToCientStremRequest = await clientStreamReq.ResponseAsync;
+            await clientStreamCall.RequestStream.CompleteAsync();
+            var response = await clientStreamCall.ResponseAsync;
 
-            Console.WriteLine(responseFormServerToCientStremRequest.Result);
+            Console.WriteLine(response.Result);
 
             Console.WriteLine("End CLIENT STREAMING GRPC test result");
+        }
 
-            //CLIENT STREAMING EXERCICE
+        private static async Task GreetEveryone(GreetingServiceClient client)
+        {
+            var stream = client.GreetEveryone();
+            Console.WriteLine("Start bidi streming GRPC test result");
+
+            var responseStremTask = Task.Run(async () =>
+            {
+                while(await stream.ResponseStream.MoveNext())
+                {
+                    Console.WriteLine($"client receive : ${stream.ResponseStream.Current.Result}");
+                    await Task.Delay(100);
+                }
+            });
+
+            Greeting.Greeting[] greetings =
+            {
+                new Greeting.Greeting { FirstName = "Nawfel", LastName = "Hamdi"},
+                new Greeting.Greeting { FirstName = "Jgon", LastName = "Doe"},
+                new Greeting.Greeting { FirstName = "Eric", LastName = "Martinez"}
+            };
+
+            foreach (var greeting in greetings)
+            {
+                await Console.Out.WriteLineAsync($"Sending Greeting : {greeting.ToString()}");
+                await stream.RequestStream.WriteAsync(new GreetingEveryoneRequest { Greeting = greeting});
+                await Task.Delay(1000);
+            }
+
+            await stream.RequestStream.CompleteAsync();
+
+            await responseStremTask;
+
+            Console.WriteLine("End bidi streming GRPC test result");
+        }
+
+        private static async Task CalculateAvg(CalculatorServiceClient client)
+        {
             Console.WriteLine("Start CLIENT STREAMING EXERICE");
 
-            var calculatorClient = new CalculatorService.CalculatorServiceClient(channel);
-            
+
             var numbers = new List<int> { 1, 2, 3, 4 };
 
-            var avgRequest = calculatorClient.CalculateAverage();
-            foreach(var number in numbers)
+            var avgRequest = client.CalculateAverage();
+            foreach (var number in numbers)
             {
                 await avgRequest.RequestStream.WriteAsync(new AverageCalculatorRequest { Number = number });
             }
@@ -89,9 +149,6 @@ namespace client
             Console.WriteLine(avgResponse.Result);
 
             Console.WriteLine("End CLIENT STREAMING EXERICE");
-
-            channel.ShutdownAsync().Wait();
-            Console.ReadKey();
         }
     }
 }
