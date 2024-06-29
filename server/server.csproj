@@ -68,11 +68,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Protobuf Include="..\greeting.proto">
-      <OutputDir>models/</OutputDir>
-    </Protobuf>
+    <Protobuf Include="../*.proto" OutputDir="%(RelativePath)models/" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Services\CalculatorServiceImp.cs" />
     <Compile Include="Services\GreetingServiceImp.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
