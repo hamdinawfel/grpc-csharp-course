@@ -1,8 +1,10 @@
 ﻿using Greeting;
 using Grpc.Core;
+using System;
 using System.Collections;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Xml;
 using static Greeting.GreetingService;
 
 namespace server.Services
@@ -25,6 +27,17 @@ namespace server.Services
             {
                 await responseStream.WriteAsync(new GreetingManyTimesResponse() { Result = result });   
             }
+        }
+
+        public override async Task<LongGreetingResponse> LongGreet(IAsyncStreamReader<LongGreetingRequest> requestStream, ServerCallContext context)
+        {
+            var result = "";
+            while (await requestStream.MoveNext())
+            {
+                result += $"{requestStream.Current.Greeting.FirstName} {requestStream.Current.Greeting.LastName} {Environment.NewLine}";
+            }
+
+            return new LongGreetingResponse() { Result = result };  
         }
     }
 }
